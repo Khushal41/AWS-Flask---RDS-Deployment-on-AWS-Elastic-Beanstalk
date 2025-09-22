@@ -154,6 +154,8 @@ This setup is ideal for small to medium applications that need a secure backend 
     ```
 7. Create schema (same SQL as above).
 
+---
+
 ### Step 6️⃣: Prepare Flask App
 
 ### Folder structure:
@@ -164,13 +166,17 @@ This setup is ideal for small to medium applications that need a secure backend 
     ├── index.html              # (Optional) Home page linking to add/view
     ├── scripts.js              # JS file for API     integration
     ├── README.md               # Project documentation
-   
+
+---
+
 ### Step 7️⃣: Zip the App
 1. Zip contents only (not folder).
 - Example:
    ```bash
    v1.zip → [application.py, requirements.txt, .ebextensions]
    ```
+
+---
 
 ### Step 8️⃣: Deploy on Elastic Beanstalk
 
@@ -191,6 +197,9 @@ This setup is ideal for small to medium applications that need a secure backend 
 
 3. **Launch environment** → wait 5–10 min.
 
+
+---
+
 ### Step 9️⃣: Test App
 1. Go to:
     ```bash
@@ -206,6 +215,8 @@ This setup is ideal for small to medium applications that need a secure backend 
     -d '{"policy_id":"P1001","name":"Alice","dob":"1992-02-02","mobile":"9876543210"}'
     ```
 
+---
+
 ## ✅ Final Working Flow:
 1. **Elastic Beanstalk** EC2 instances in public subnets run Flask app.
 2. **Application Load Balancer (ALB)** routes traffic to EB EC2 instances.
@@ -214,6 +225,8 @@ This setup is ideal for small to medium applications that need a secure backend 
 - ALB ↔ EC2
 - EC2 ↔ RDS
 - SSH only from your IP
+
+---
 
 ## 👨‍💻 Author
 Khushal Ravindra Bhavsar✨  

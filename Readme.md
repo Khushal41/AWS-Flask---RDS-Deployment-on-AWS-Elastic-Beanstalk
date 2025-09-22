@@ -171,29 +171,29 @@ This setup is ideal for small to medium applications that need a secure backend 
 
 ### Step 7️⃣: Zip the App
 1. Zip contents only (not folder).
-- Example:
-   ```bash
-   v1.zip → [application.py, requirements.txt, .ebextensions]
-   ```
+   - Example:
+     ```bash
+     v1.zip → [application.py, requirements.txt, .ebextensions]
+     ```
 
 ---
 
 ### Step 8️⃣: Deploy on Elastic Beanstalk
 
 1. **EB → Create Application:**
-- **Name:** flask-insured-app
-- **Platform:** Python 3.x
-- **Environment type:** Load balanced
-- **Upload:** v1.zip
+   - **Name:** flask-insured-app
+   - **Platform:** Python 3.x
+   - **Environment type:** Load balanced
+   - **Upload:** v1.zip
 
 2. **Configure → Network:**
-- **VPC:** project-vpc
-- **LB Subnets:** Public-A, Public-B
-- **EC2 Subnets:** Public-A, Public-B (auto-assign public IP)
-- **ELB SG:** SG-ALB
-- **EC2 SG:** SG-EC2
-- **Key pair:** your SSH key
-- **Roles:** default EB roles
+   - **VPC:** project-vpc
+   - **LB Subnets:** Public-A, Public-B
+   - **EC2 Subnets:** Public-A, Public-B (auto-assign public IP)
+   - **ELB SG:** SG-ALB
+   - **EC2 SG:** SG-EC2
+   - **Key pair:** your SSH key
+   - **Roles:** default EB roles
 
 3. **Launch environment** → wait 5–10 min.
 
@@ -205,8 +205,8 @@ This setup is ideal for small to medium applications that need a secure backend 
     ```bash
     http://<env>.elasticbeanstalk.com/
     ```
-- / → ✅ Flask app running!
-- /claims → returns [] initially
+   - / → ✅ Flask app running!
+   - /claims → returns [] initially
 
 2. Add sample data:
     ```bash
@@ -222,9 +222,9 @@ This setup is ideal for small to medium applications that need a secure backend 
 2. **Application Load Balancer (ALB)** routes traffic to EB EC2 instances.
 3. **Flask app** connects securely to **RDS MySQL** in private subnets.
 4. **Security groups** restrict access:
-- ALB ↔ EC2
-- EC2 ↔ RDS
-- SSH only from your IP
+   - ALB ↔ EC2
+   - EC2 ↔ RDS
+   - SSH only from your IP
 
 ---
 

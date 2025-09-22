@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Insured - Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Welcome to Insured!</h1>
+    <div class="banner">
+        <img src="{{ url_for('static', filename='images/health.jpg') }}" alt="Main Banner">
+    </div>
+    <div class="products">
+        <h2>Our Products</h2>
+        {% for product in products %}
+        <div class="product">
+            <img src="{{ url_for('static', filename='images/' + product.banner) }}" alt="{{ product.name }}">
+            <h3>{{ product.name }}</h3>
+            <p>{{ product.description }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    <a href="{{ url_for('claim') }}" class="claim-button">Create a Claim</a>
+</body>
+</html>

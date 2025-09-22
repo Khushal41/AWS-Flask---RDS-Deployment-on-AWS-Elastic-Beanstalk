@@ -1,0 +1,283 @@
+Step 1️⃣: Create VPC & Subnets
+
+Go to VPC → Your VPCs → Create VPC
+
+Name: project-vpc
+
+IPv4 CIDR: 10.0.0.0/16
+
+Tenancy: Default
+
+Create subnets:
+
+Public-A: 10.0.1.0/24 (AZ1)
+
+Public-B: 10.0.2.0/24 (AZ2)
+
+Private-A: 10.0.3.0/24 (AZ1)
+
+Private-B: 10.0.4.0/24 (AZ2)
+
+Step 2️⃣: Internet Gateway & Route Tables
+
+Create IGW → Attach to project-vpc.
+
+Public Route Table:
+
+Add route 0.0.0.0/0 → IGW
+
+Associate Public-A, Public-B
+
+Private Route Table:
+
+Associate Private-A, Private-B
+
+No internet route needed
+
+EB instances will be in public subnets, RDS in private subnets.
+
+Step 3️⃣: Security Groups
+
+SG-ALB (for Load Balancer)
+
+Inbound: HTTP 80, HTTPS 443 → 0.0.0.0/0
+
+Outbound: All
+
+SG-EC2 (for EB instances)
+
+Inbound: HTTP 80 → SG-ALB
+
+SSH 22 → Your IP
+
+Outbound: All
+
+SG-RDS (for MySQL)
+
+Inbound: MySQL 3306 → SG-EC2 only
+
+Outbound: All
+
+Optional: temporarily allow MySQL 3306 from your IP for initial setup.
+
+Step 4️⃣: Create RDS (Private)
+
+DB Subnet Group → Add Private-A, Private-B
+
+Name: project-db-subnet-group
+
+RDS MySQL → Standard Create
+
+DB Identifier: prodb
+
+Username: admin, Password: admin123
+
+DB class: db.t3.micro
+
+Public access: No
+
+Security group: SG-RDS
+
+Initial DB name: insured
+
+Copy RDS endpoint → needed for Flask.
+
+🔑 Step 5: Load DB Schema
+✅ Option 1 (quick & temporary – less secure)
+
+Add your current laptop IP into RDS-SG inbound (port 3306).
+
+Run directly from your machine:
+
+mysql -h <RDS-ENDPOINT> -u admin -p
+
+
+Execute SQL statements:
+
+CREATE DATABASE insured;
+USE insured;
+CREATE TABLE claims (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  policy_id VARCHAR(255),
+  name VARCHAR(255),
+  dob DATE,
+  mobile VARCHAR(20),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+⚠️ This should only be used for initial setup/troubleshooting because it exposes DB directly to your IP.
+
+✅ Option 2 (preferred, secure – via bastion host)
+
+Keep RDS in private subnets (not publicly accessible).
+
+Allow inbound 3306 only from SG-Bastion → SG-RDS.
+
+Launch Bastion EC2 in public subnet with SSH access only from your admin IP.
+
+Steps:
+
+SSH into bastion:
+
+ssh -i ~/keys/mykey.pem ec2-user@<BASTION_PUBLIC_IP>
+
+
+Install MySQL client:
+
+Amazon Linux:
+
+sudo yum install -y mariadb
+
+
+Ubuntu:
+
+sudo apt-get update && sudo apt-get install -y mysql-client
+
+
+Connect from bastion to RDS:
+
+mysql -h <RDS-ENDPOINT> -u admin -p
+
+
+Create schema:
+
+CREATE DATABASE insured;
+USE insured;
+CREATE TABLE claims (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  policy_id VARCHAR(255),
+  name VARCHAR(255),
+  dob DATE,
+  mobile VARCHAR(20),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+Now your DB is provisioned securely.
+
+Step 6️⃣: Prepare Flask App
+
+Folder structure:
+
+application.py
+requirements.txt
+.ebextensions/config.config
+
+
+application.py
+
+import os, pymysql
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+connection = pymysql.connect(
+    host=os.environ["DB_HOST"],
+    user=os.environ["DB_USER"],
+    password=os.environ["DB_PASSWORD"],
+    database=os.environ["DB_NAME"],
+    cursorclass=pymysql.cursors.DictCursor
+)
+
+@app.route("/")
+def home():
+    return "✅ Flask app running!"
+
+@app.route("/claims", methods=["GET"])
+def get_claims():
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM claims")
+        return jsonify(cursor.fetchall())
+
+
+requirements.txt
+
+Flask
+pymysql
+boto3  # optional, if using Secrets Manager
+
+
+.ebextensions/config.config
+
+option_settings:
+  aws:elasticbeanstalk:application:environment:
+    DB_HOST: "prodb.<your-endpoint>.rds.amazonaws.com"
+    DB_USER: "admin"
+    DB_PASSWORD: "admin123"
+    DB_NAME: "insured"
+  aws:elasticbeanstalk:container:python:
+    WSGIPath: application:app
+
+
+Optional: Use Secrets Manager + IAM Role to fetch DB credentials instead of hardcoding.
+
+Step 7️⃣: Zip the App
+
+Zip contents only (application.py, requirements.txt, .ebextensions) → v1.zip
+
+Step 8️⃣: Deploy on Elastic Beanstalk
+
+EB → Create Application
+
+Name: flask-insured-app
+
+Platform: Python 3.x
+
+Environment type: Load balanced
+
+Upload v1.zip
+
+Configure → Network:
+
+VPC: project-vpc
+
+LB subnets: Public-A, Public-B
+
+EC2 subnets: Public-A, Public-B (auto-assign public IP)
+
+ELB SG: SG-ALB
+
+EC2 SG: SG-EC2
+
+Key pair: your SSH key
+
+Roles: Default EB roles
+
+Launch environment → wait 5–10 min
+
+Step 9️⃣: Set Environment Variables (Optional but secure)
+
+EB Console → Configuration → Software → Environment Properties:
+
+DB_HOST=<RDS endpoint>
+DB_USER=admin
+DB_PASSWORD=admin123
+DB_NAME=insured
+
+Step 🔟: Test App
+
+EB URL → http://<env>.elasticbeanstalk.com/
+
+/ → "✅ Flask app running!"
+/claims → returns [] initially
+
+
+Add sample data:
+
+curl -X POST http://<EB-URL>/add-claim \
+-H "Content-Type: application/json" \
+-d '{"policy_id":"P1001","name":"Alice","dob":"1992-02-02","mobile":"9876543210"}'
+
+
+✅ Key Points
+
+EB is public (internet accessible) → can update packages, etc.
+
+RDS is private → not exposed to internet.
+
+Security groups allow EB → RDS only.
+
+No NAT gateway needed.
+
+IAM roles only required if using Secrets Manager or other AWS services.
